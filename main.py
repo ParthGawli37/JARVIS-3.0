@@ -11,12 +11,17 @@ from bs4 import BeautifulSoup
 import speech_recognition as sr
 import winsound
 import wikipedia
+import openai
+from apikey import api_data
+
+openai.api_key=api_data
+
+completion=openai.Completion()
 
 engine = pyttsx3.init()
-
 voices = engine.getProperty('voices')
 engine.setProperty('voice', voices[0].id)
-engine.setProperty('rate', 150)
+
 
 conn = sqlite3.connect('voice_input.db')
 c = conn.cursor()
@@ -27,31 +32,37 @@ c.execute('''CREATE TABLE IF NOT EXISTS voice_input
              timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
 conn.commit()
 
+def Reply(question):
+    prompt=f'Parth: {question}\n Jarvis: '
+    response=completion.create(prompt=prompt, engine="text-davinci-002", stop=['\Parth'], max_tokens=124)
+    answer=response.choices[0].text.strip()
+    return answer
 
 def speak(audio):
     engine.say(audio)
     engine.runAndWait()
 
+speak("Hello How Are You? ")
 
 def time_():
     Time = datetime.datetime.now().strftime("%H:%M:%S")
     speak("The current time is")
     speak(Time)
 
-def Take_query():
+def takeCommand():
     r = sr.Recognizer()
     with sr.Microphone() as source:
-        print("Listening...")
+        print('Listening....')
+        r.pause_threshold = 1
         audio = r.listen(source)
     try:
-        print("Recognizing...")
+        print("Recognizing.....")
         query = r.recognize_google(audio, language='en-in')
-        print(f"User said: {query}\n")
+        print("Parth Said: {} \n".format(query))
         c.execute("INSERT INTO voice_input (input) VALUES (?)", (query,))
         conn.commit()
     except Exception as e:
-        print(e)
-        print("Say that again please...")
+        print("Say That Again....")
         return "None"
     return query
 
@@ -117,6 +128,7 @@ def set_alarm():
             for i in range(3):
                 winsound.Beep(1000, 1000)
             break
+
 
 def google_search():
     speak("What should I search for you, Sir?")
@@ -234,105 +246,16 @@ def send_whatsapp_message(name):
     else:
         print(f"Sorry, I don't have a contact named {name}.")
 
-def getDate():
-    now = datetime.datetime.now()
-    month = now.month
-    day = now.day
-    if month == 1:
-        month = "January"
-    elif month == 2:
-        month = "February"
-    elif month == 3:
-        month = "March"
-    elif month == 4:
-        month = "April"
-    elif month == 5:
-        month = "May"
-    elif month == 6:
-        month = "June"
-    elif month == 7:
-        month = "July"
-    elif month == 8:
-        month = "August"
-    elif month == 9:
-        month = "September"
-    elif month == 10:
-        month = "October"
-    elif month == 11:
-        month = "November"
-    else:
-        month = "December"
-    return month + " " + str(day)
-
-def setReminder():
-    speak("What would you like me to remind you about?")
-    text = input("Enter Reminder: ")
-    speak("When would you like me to remind you?")
-    date = getDate()
-    year = datetime.datetime.now().year
-    month = datetime.datetime.now().month
-    day = datetime.datetime.now().day
-    hour = int(input("Enter Hour (in 24-hour format): "))
-    minute = int(input("Enter Minute: "))
-    speak("Reminder set for " + str(hour) + ":" + str(minute))
-    reminderTime = datetime.datetime(year, month, day, hour, minute)
-    return (text, reminderTime)
-
-def setCalendarEvent():
-    speak("What would you like to name this event?")
-    eventName = input("Enter Event Name: ")
-    speak("When is the event?")
-    year = int(input("Enter Year: "))
-    month = int(input("Enter Month (1-12): "))
-    day = int(input("Enter Day: "))
-    speak("At what time does the event start?")
-    hour = int(input("Enter Hour (in 24-hour format): "))
-    minute = int(input("Enter Minute: "))
-    speak("Event set for " + str(calendar.month_name[month]) + " " + str(day) + " at " + str(hour) + ":" + str(minute))
-    eventTime = datetime.datetime(year, month, day, hour, minute)
-    return (eventName, eventTime)
-
-def checkReminders(reminders):
-    now = datetime.datetime.now()
-    for reminder in reminders:
-        if reminder[1] < now:
-            speak("Reminder: " + reminder[0])
-            reminders.remove(reminder)
-
-def checkEvents(events):
-    now = datetime.datetime.now()
-    for event in events:
-        if event[1] < now:
-            speak("Event: " + event[0])
-            events.remove(event)
-
-def runJarvis():
-    reminders = []
-    events = []
-    while True:
-        command = input("What can I do for you? ")
-        if "reminder" in command:
-            reminders.append(setReminder())
-        elif "event" in command:
-            events.append(setCalendarEvent())
-        elif "check reminders" in command:
-            checkReminders(reminders)
-        elif "check events" in command:
-            checkEvents(events)
-        elif "stop" in command:
-            break
-
-runJarvis()
 
 if __name__ == '__main__':
-    wishme()
     while True:
-        query = Take_query().lower()
-        if "open youtube" in query:
-            speak("Opening Youtube")
+        query=takeCommand().lower()
+        ans=Reply(query)
+        print(ans)
+        speak(ans)
+        if 'open youtube' in query:
             webbrowser.open("www.youtube.com")
-        elif "open google" in query:
-            speak("Opening Google")
+        if 'open google' in query:
             webbrowser.open("www.google.com")
 
         elif "open whatsapp" in query:
@@ -398,15 +321,6 @@ if __name__ == '__main__':
         elif "screenshot" in query:
             take_screenshot()
 
-        elif "set reminder" in query:
-            setReminder()
-
-        elif "check reminder" in query:
-            checkReminders()
-
-        elif "calendar" in command:
-             os.startfile(calendar)
-
         elif "google" in query:
             google_search()
 
@@ -416,5 +330,3 @@ if __name__ == '__main__':
             exit()
         else:
             speak("I didn't understand what you said. Can you please repeat?")
-
-
