@@ -10,6 +10,7 @@ from PIL import ImageGrab
 import subprocess
 import psutil
 import winsound
+import datetime
 
 openai.api_key=api_data
 
@@ -17,9 +18,12 @@ completion=openai.Completion()
 
 def Reply(question):
     prompt=f'Parth: {question}\n Jarvis: '
+    if 'thank you' in question:
+        return "You're welcome."
     response=completion.create(prompt=prompt, engine="text-davinci-002", stop=['\Parth'], max_tokens=124)
     answer=response.choices[0].text.strip()
     return answer
+
 
 def searchOnGoogle(query):
     query = query.replace(" ", "+")
@@ -100,7 +104,23 @@ def speak(text):
     engine.say(text)
     engine.runAndWait()
 
-speak("Hello How Are You? ")
+
+def greet():
+    hour = int(datetime.datetime.now().hour)
+    if hour>=0 and hour<12:
+        speak("Good Morning!")
+    elif hour>=12 and hour<18:
+        speak("Good Afternoon!")
+    else:
+        speak("Good Evening!")
+    speak("I am Jarvis. How can I assist you?")
+
+def introduce():
+    speak("My name is Jarvis. I am an AI virtual assistant created by Parth , Ayush , Om , Amey . I can help you with a variety of tasks including searching the web, playing music, setting alarms, taking notes, and much more.")
+
+def thank():
+    speak("Thank you for creating me. It's a pleasure to serve you!")
+
 
 conn = sqlite3.connect('voice_input.db')
 c = conn.cursor()
@@ -131,6 +151,8 @@ def takeCommand():
     return query
 
 if __name__ == '__main__':
+    greet()
+    introduce()
     while True:
         query=takeCommand().lower()
         ans=Reply(query)
@@ -182,8 +204,14 @@ if __name__ == '__main__':
             battery = psutil.sensors_battery()
             speak("Battery is at ")
             speak(battery.percent)
-        elif "exit" in query:
-            speak("Goodbye!")
+        elif "bye" in query:
+            goodbye_messages =["Goodbye! Thanks for chatting with me.",
+        "Take care and have a great day!",
+        "Bye for now! It was great talking with you.",
+        "Thanks for stopping by! Have a wonderful day.",
+        "See you later! It was nice to chat with you.",]
+            goodbye = random.choice(goodbye_messages)
+            speak(goodbye)
             exit()
         else:
             pass
