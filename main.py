@@ -11,6 +11,7 @@ import subprocess
 import psutil
 import winsound
 import datetime
+import pywhatkit
 
 openai.api_key=api_data
 
@@ -72,20 +73,30 @@ def tell_joke():
     speak(joke)
 
 def send_whatsapp_message(name):
+    contacts = {'pappa': '+919930008990', 'mummy': '+918779761584', 'ayush': '+917718068314', 'om': '+919224477282'}
 
-    contacts = {'pappa': '+919930008990', 'mummy': '+918779761584', 'ayush': '+917718068314', 'om': '9224477282'}
     if name.lower() in contacts:
         phone_number = contacts[name.lower()]
 
         recognizer = sr.Recognizer()
+
         with sr.Microphone() as source:
             print("What do you want to say?")
             audio = recognizer.listen(source)
             message = recognizer.recognize_google(audio)
 
-        print(f"Sending message '{message}' to {name}")
+        print(f"Sending message '{message}' to {name}...")
 
-        pywhatkit.sendwhatmsg(phone_number, message, int(time.strftime("%H")), int(time.strftime("%M")) + 1, wait_time=20)
+
+        current_time = time.localtime()
+        hour, minute = current_time.tm_hour, current_time.tm_min + 1
+        if minute >= 60:
+            hour += 1
+            minute = 0
+
+
+        pywhatkit.sendwhatmsg(phone_number, message, hour, minute, wait_time=10)
+        print("Message sent successfully!")
     else:
         print(f"Sorry, I don't have a contact named {name}.")
 
@@ -96,8 +107,8 @@ def take_screenshot():
     speak("Screenshot saved")
 
 
-engine=pyttsx3.init('sapi5')
-voices=engine.getProperty('voices')
+engine = pyttsx3.init('sapi5')
+voices = engine.getProperty('voices')
 engine.setProperty('voice', voices[0].id)
 
 def speak(text):
@@ -152,7 +163,6 @@ def takeCommand():
 
 if __name__ == '__main__':
     greet()
-    introduce()
     while True:
         query=takeCommand().lower()
         ans=Reply(query)
@@ -188,6 +198,8 @@ if __name__ == '__main__':
             os.system('calculator')
         elif "open settings" in query:
             open_settings()
+        elif "introduse your self" in query:
+            introduce()
         elif "set alarm" in query:
             set_alarm()
         elif "tell me a joke" in query:
@@ -215,6 +227,3 @@ if __name__ == '__main__':
             exit()
         else:
             pass
-
-
-
