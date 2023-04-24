@@ -12,6 +12,9 @@ import psutil
 import winsound
 import datetime
 import pywhatkit
+import os
+import ctypes
+import cv2
 
 openai.api_key=api_data
 
@@ -40,14 +43,21 @@ def searchOnYoutube():
     speak(f"Playing {video} on YouTube.")
 
 def set_alarm():
-    alarm_time_str = input("Enter the time in 'HH:MM:SS AM/PM' format: ")
-    speak("Enter the time in 'HH:MM:SS AM/PM' format: ")
+
+    r = sr.Recognizer()
+    with sr.Microphone() as source:
+        speak("Please speak the time in 'HH:MM:SS AM/PM' format.")
+        audio = r.listen(source)
+
+
     try:
+        alarm_time_str = r.recognize_google(audio)
         datetime.datetime.strptime(alarm_time_str, '%I:%M:%S %p')
-    except ValueError:
-        print("Invalid time format! Please enter time in 'HH:MM:SS AM/PM' format.")
-        speak("Invalid time format! Please enter time in 'HH:MM:SS AM/PM' format.")
+    except (ValueError, sr.UnknownValueError, sr.RequestError):
+        print("Invalid time format! Please speak the time in 'HH:MM:SS AM/PM' format.")
+        speak("Invalid time format! Please speak the time in 'HH:MM:SS AM/PM' format.")
         return
+
     current_time = datetime.datetime.now().strftime('%I:%M:%S %p')
     print(f"Current time is {current_time}.")
     speak(f"Current time is {current_time}.")
@@ -72,39 +82,45 @@ def tell_joke():
     joke = random.choice(jokes)
     speak(joke)
 
-def send_whatsapp_message(name):
-    contacts = {'pappa': '+919930008990', 'mummy': '+918779761584', 'ayush': '+917718068314', 'om': '+919224477282'}
+def send_whatsapp_msg(name, message):
+    contacts = {
+        'pappa': '+91 9930008990',
+        'ayush': '+91 7718068314',
+        'om': '+91 9224477282',
+        'Amey': '+91 8828067521',
+        'parth': '+91 8779781370'
+    }
 
-    if name.lower() in contacts:
-        phone_number = contacts[name.lower()]
+    if name.lower() not in contacts:
+        print(f"Error: {name} not found in contacts.")
+        return
 
-        recognizer = sr.Recognizer()
+    recipient = contacts[name.lower()]
+    now = datetime.datetime.now()
+    hour = now.hour
+    minute = now.minute + 1
 
-        with sr.Microphone() as source:
-            print("What do you want to say?")
-            audio = recognizer.listen(source)
-            message = recognizer.recognize_google(audio)
-
-        print(f"Sending message '{message}' to {name}...")
-
-
-        current_time = time.localtime()
-        hour, minute = current_time.tm_hour, current_time.tm_min + 1
-        if minute >= 60:
-            hour += 1
-            minute = 0
-
-
-        pywhatkit.sendwhatmsg(phone_number, message, hour, minute, wait_time=10)
-        print("Message sent successfully!")
-    else:
-        print(f"Sorry, I don't have a contact named {name}.")
+    pywhatkit.sendwhatmsg(recipient, message, hour, minute)
+    print(f"Message sent to {name} ({recipient}): {message}")
 
 def take_screenshot():
     speak("Taking Screenshot")
     screenshot = ImageGrab.grab()
     screenshot.save("screenshot.png")
     speak("Screenshot saved")
+
+def take_selfie():
+
+    cap = cv2.VideoCapture(0)
+
+    ret, frame = cap.read()
+
+    cap.release()
+
+    cv2.imwrite('selfie.jpg', frame)
+
+    print('Selfie taken and saved as selfie.jpg')
+    speak('Selfie taken and saved as selfie.jpg')
 
 
 engine = pyttsx3.init('sapi5')
@@ -179,11 +195,11 @@ if __name__ == '__main__':
             query = query.replace("search youtube", "")
             searchOnYoutube()
         elif "open whatsapp" in query:
-             subprocess.run(["C:\\Users\\Parth\\AppData\\Local\\WhatsApp\\WhatsApp.exe"])
+            subprocess.run(["C:\\Users\\Parth\\AppData\\Local\\WhatsApp\\WhatsApp.exe"])
         elif "open code" in query:
             subprocess.run(["C:\\Program Files\\ldplayer9box\\New folder\\PyCharm Edu 2022.2.2\\bin\\pycharm64.exe"])
         elif "send message" in query:
-            send_whatsapp_message(name)
+            pywhatkit.send_whatsapp_msg(name, message)
         elif "open word" in query:
             os.startfile('C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Microsoft Office\\Microsoft Word 2019.lnk')
         elif "open excel" in query:
@@ -191,25 +207,28 @@ if __name__ == '__main__':
         elif "open powerpoint" in query:
             os.startfile('C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Microsoft Office\\Microsoft PowerPoint 2019.lnk')
         elif "open notepad" in query:
-            os.system('notepad')
+            os.system('start notepad.exe')
         elif "open clock" in query:
             os.system('start ms-clock:')
         elif "open calculator" in query:
             os.system('calculator')
         elif "open settings" in query:
             open_settings()
-        elif "introduse your self" in query:
+        elif "introduce your self" in query:
             introduce()
         elif "set alarm" in query:
             set_alarm()
         elif "tell me a joke" in query:
             tell_joke()
-        elif "send whatsapp message to" in query:
-            name = query.split("to ")[1]
-            send_whatsapp_message(name)
         elif "take a screenshot" in query:
             take_screenshot()
-        elif "cpu usage" in query:
+        elif "take selfie" in query:
+            take_selfie()
+        elif "shutdown" in query:
+            os.system('shutdown /s /t 1')
+        elif "restart" in query:
+            os.system("shutdown /r /t 1")
+        elif "cpu" in query:
             usage = str(psutil.cpu_percent())
             speak('CPU usage is at ' + usage)
         elif "battery status" in query:
@@ -217,11 +236,13 @@ if __name__ == '__main__':
             speak("Battery is at ")
             speak(battery.percent)
         elif "bye" in query:
-            goodbye_messages =["Goodbye! Thanks for chatting with me.",
-        "Take care and have a great day!",
-        "Bye for now! It was great talking with you.",
-        "Thanks for stopping by! Have a wonderful day.",
-        "See you later! It was nice to chat with you.",]
+            goodbye_messages =[
+                                "Goodbye! Thanks for chatting with me.",
+                                "Take care and have a great day!",
+                                "Bye for now! It was great talking with you.",
+                                "Thanks for stopping by! Have a wonderful day.",
+                                "See you later! It was nice to chat with you.",
+                               ]
             goodbye = random.choice(goodbye_messages)
             speak(goodbye)
             exit()
